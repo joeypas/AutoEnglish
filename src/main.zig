@@ -92,21 +92,16 @@ pub fn main() !void {
 
     const root = try trie.alloc_node();
 
-    //try trie.add(root, "Hello");
-    //try trie.add(root, "Help");
-    //try trie.add(root, "Why");
-    //try trie.add(root, "While");
-    //try trie.add(root, "hello");
-
     var file = try std.fs.cwd().openFile("words_alpha.txt", .{});
     defer file.close();
 
     var buf: [200]u8 = undefined;
-    var next = try file.reader().readUntilDelimiterOrEof(&buf, '\r');
+    var buff = std.io.bufferedReader(file.reader());
+    const reader = buff.reader();
+    var next = try reader.readUntilDelimiterOrEof(&buf, '\r');
 
-    var i: usize = 0;
-    while (i < 370104) : (i += 1) {
-        try trie.add(root, next.?[1..]);
+    while (next) |n| {
+        try trie.add(root, n[1..]);
         next = try file.reader().readUntilDelimiterOrEof(&buf, '\r');
     }
 
