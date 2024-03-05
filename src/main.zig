@@ -48,8 +48,12 @@ const Trie = struct {
         while (i < root.children.len) : (i += 1) {
             if (root.children[i]) |node| {
                 const c_index: usize = @intFromPtr(node) - @intFromPtr(self.pool.items.ptr);
-                try writer.print("   Node_{d} [label=\"{c}\"]\n", .{ c_index, @as(u8, @intCast(i)) });
-                try writer.print("   Node_{d} -> Node_{d} [label=\"{c}\"]\n", .{ index, c_index, @as(u8, @intCast(i)) });
+                try writer.print("  Node_{d} [label=\"{c}\"]\n", .{ c_index, @as(u8, @intCast(i)) });
+                try writer.print("  Node_{d} -> Node_{d} [label=\"{c}\"]\n", .{ index, c_index, @as(u8, @intCast(i)) });
+                if (node.end) {
+                    try writer.print("  Node_{d} [label =\"end\"]\n", .{c_index + 1});
+                    try writer.print("  Node_{d} -> Node_{d} [label=\"end\"]\n", .{ c_index, c_index + 1 });
+                }
                 try self.print_words(node, writer);
             }
         }
