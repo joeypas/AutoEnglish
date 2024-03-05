@@ -1,5 +1,6 @@
 const std = @import("std");
 const NodePool = std.ArrayList(Trie.Node);
+const data = @embedFile("words_alpha.txt");
 
 const Trie = struct {
     pool: NodePool,
@@ -92,17 +93,20 @@ pub fn main() !void {
 
     const root = try trie.alloc_node();
 
-    var file = try std.fs.cwd().openFile("words_alpha.txt", .{});
-    defer file.close();
+    //var file = try std.fs.cwd().openFile("words_alpha.txt", .{});
+    //defer file.close();
 
-    var buf: [200]u8 = undefined;
-    var buff = std.io.bufferedReader(file.reader());
-    const reader = buff.reader();
-    var next = try reader.readUntilDelimiterOrEof(&buf, '\r');
+    //var buf: [200]u8 = undefined;
+    //var buff = std.io.bufferedReader(file.reader());
+    //const reader = buff.reader();
 
+    var itr = std.mem.splitScalar(u8, data, '\r');
+    //var next = try reader.readUntilDelimiterOrEof(&buf, '\r');
+    var next = itr.next();
     while (next) |n| {
         try trie.add(root, n[1..]);
-        next = try file.reader().readUntilDelimiterOrEof(&buf, '\r');
+        //next = try file.reader().readUntilDelimiterOrEof(&buf, '\r');
+        next = itr.next();
     }
 
     const slice = "help";
