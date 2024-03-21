@@ -12,7 +12,10 @@ const Trie = struct {
     };
 
     pub fn init(allocator: std.mem.Allocator) !Trie {
-        return Trie{ .allocator = allocator, .pool = try NodePool.initCapacity(allocator, 3494707) };
+        return Trie{
+            .allocator = allocator,
+            .pool = try NodePool.initCapacity(allocator, 3494707),
+        };
     }
 
     pub fn deinit(self: *Trie) void {
@@ -20,7 +23,10 @@ const Trie = struct {
     }
 
     pub fn alloc_node(self: *Trie) !*Node {
-        const node = Node{ .end = false, .children = [_]?*Node{null} ** 256 };
+        const node = Node{
+            .end = false,
+            .children = [_]?*Node{null} ** 256,
+        };
         try self.pool.append(node);
         return &(self.pool.items[self.pool.items.len - 1]);
     }
@@ -49,11 +55,23 @@ const Trie = struct {
         while (i < root.children.len) : (i += 1) {
             if (root.children[i]) |node| {
                 const c_index: usize = @intFromPtr(node) - @intFromPtr(self.pool.items.ptr);
-                try writer.print("  Node_{d} [label=\"{c}\"]\n", .{ c_index, @as(u8, @intCast(i)) });
-                try writer.print("  Node_{d} -> Node_{d} [label=\"{c}\"]\n", .{ index, c_index, @as(u8, @intCast(i)) });
+                try writer.print(
+                    "  Node_{d} [label=\"{c}\"]\n",
+                    .{ c_index, @as(u8, @intCast(i)) },
+                );
+                try writer.print(
+                    "  Node_{d} -> Node_{d} [label=\"{c}\"]\n",
+                    .{ index, c_index, @as(u8, @intCast(i)) },
+                );
                 if (node.end) {
-                    try writer.print("  Node_{d} [label =\"end\"]\n", .{c_index + 1});
-                    try writer.print("  Node_{d} -> Node_{d} [label=\"end\"]\n", .{ c_index, c_index + 1 });
+                    try writer.print(
+                        "  Node_{d} [label =\"end\"]\n",
+                        .{c_index + 1},
+                    );
+                    try writer.print(
+                        "  Node_{d} -> Node_{d} [label=\"end\"]\n",
+                        .{ c_index, c_index + 1 },
+                    );
                 }
                 try self.print_words(node, writer);
             }
@@ -61,8 +79,8 @@ const Trie = struct {
     }
 
     pub fn get_sub_tree(self: *Trie, root: *Node, slice: []const u8) *Node {
-        var str = slice[0..];
         var node = root;
+        var str = slice[0..];
         while (str.len > 0) {
             const index: usize = @intCast(str[0]);
             if (node.children[index] == null) {
@@ -76,6 +94,21 @@ const Trie = struct {
 
         return node;
     }
+
+    pub fn get_autocompletion(self: *Trie, root: ?*Node, writer: anytype, ac_buffer: *std.ArrayList(u8)) !void {
+        if (root) |r| {
+            if (r.end) {
+                try writer.print("{s}\n", .{ac_buffer.items});
+            }
+
+            var i: usize = 0;
+            while (i < r.children.len) : (i += 1) {
+                try ac_buffer.append(@intCast(i));
+                try self.get_autocompletion(r.children[i], writer, ac_buffer);
+                _ = ac_buffer.pop();
+            }
+        }
+    }
 };
 
 pub fn main() !void {
@@ -84,24 +117,19 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     var stdout = std.io.getStdOut();
+    var stdin = std.io.getStdIn();
+    defer stdin.close();
     defer stdout.close();
 
     const writer = stdout.writer();
-
+    const reader = stdin.reader();
     var trie = try Trie.init(allocator);
     defer trie.deinit();
 
     const root = try trie.alloc_node();
 
-    //var file = try std.fs.cwd().openFile("words_alpha.txt", .{});
-    //defer file.close();
-
-    //var buf: [200]u8 = undefined;
-    //var buff = std.io.bufferedReader(file.reader());
-    //const reader = buff.reader();
-
+    // Read wordlist and create trie
     var itr = std.mem.splitScalar(u8, data, '\r');
-    //var next = try reader.readUntilDelimiterOrEof(&buf, '\r');
     var next = itr.next();
     while (next) |n| {
         try trie.add(root, n[1..]);
@@ -109,10 +137,25 @@ pub fn main() !void {
         next = itr.next();
     }
 
-    const slice = "help";
-    const node = trie.get_sub_tree(root, slice);
-    try writer.print("digraph Trie {c}\n", .{123});
-    try writer.print("   Node_{d} [label=root]\n", .{@intFromPtr(root) - @intFromPtr(trie.pool.items.ptr)});
-    try trie.print_words(node, writer);
-    try writer.print("{c}\n", .{125});
+    // Event Loop
+    while (true) {
+        const slice = try reader.readUntilDelimiterAlloc(
+            allocator,
+            '\n',
+            20,
+        );
+        defer allocator.free(slice);
+
+        // If nothing is entered exit
+        if (slice.len == 0) {
+            break;
+        }
+
+        const node = trie.get_sub_tree(root, slice);
+
+        var temp = std.ArrayList(u8).init(allocator);
+        defer temp.deinit();
+        try trie.get_autocompletion(node, writer, &temp);
+        try writer.print("\n", .{});
+    }
 }
