@@ -6,5 +6,4 @@ Build a trie using english words and then attempt to autocomplete slices
 
 ``` bash
     zig build -Doptimize=ReleaseFast
-    ./zig-out/bin/autoenglish > out.dot
-    dot -Tsvg > out.svg
+    ./zig-out/bin/autoenglish
