@@ -155,9 +155,14 @@ pub fn main() !void {
 
         const node = trie.get_sub_tree(root, slice);
 
+        // Buffer that writer !!
+        var words = std.ArrayList(u8).init(allocator);
         var temp = std.ArrayList(u8).init(allocator);
         defer temp.deinit();
-        try trie.get_autocompletion(node, writer, &temp);
+        defer words.deinit();
+
+        try trie.get_autocompletion(node, words.writer(), &temp);
+        try writer.print("{s}", .{words.items});
         try writer.print("\n", .{});
     }
 }
