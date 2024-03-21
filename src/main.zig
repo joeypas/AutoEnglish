@@ -139,6 +139,8 @@ pub fn main() !void {
 
     // Event Loop
     while (true) {
+        try writer.print("Enter prefix: ", .{});
+
         const slice = try reader.readUntilDelimiterAlloc(
             allocator,
             '\n',
