@@ -2,13 +2,16 @@ const std = @import("std");
 const NodePool = std.ArrayList(Trie.Node);
 const data = @embedFile("words_alpha.txt");
 
+const LIST_LEN = 96;
+const OFFSET = 32;
+
 const Trie = struct {
     pool: NodePool,
     allocator: std.mem.Allocator,
 
     pub const Node = struct {
         end: bool,
-        children: [256]?*Node,
+        children: [LIST_LEN]?*Node,
     };
 
     pub fn init(allocator: std.mem.Allocator) !Trie {
@@ -25,7 +28,7 @@ const Trie = struct {
     pub fn alloc_node(self: *Trie) !*Node {
         const node = Node{
             .end = false,
-            .children = [_]?*Node{null} ** 256,
+            .children = [_]?*Node{null} ** LIST_LEN,
         };
         try self.pool.append(node);
         return &(self.pool.items[self.pool.items.len - 1]);
@@ -36,7 +39,7 @@ const Trie = struct {
             return;
         }
 
-        const index: usize = @intCast(slice[0]);
+        const index: usize = @intCast(slice[0] - OFFSET);
         if (root.children[index] == null) {
             var node = try self.alloc_node();
             if (slice.len == 1) {
@@ -82,7 +85,7 @@ const Trie = struct {
         var node = root;
         var str = slice[0..];
         while (str.len > 0) {
-            const index: usize = @intCast(str[0]);
+            const index: usize = @intCast(str[0] - OFFSET);
             if (node.children[index] == null) {
                 break;
             }
@@ -103,7 +106,7 @@ const Trie = struct {
 
             var i: usize = 0;
             while (i < r.children.len) : (i += 1) {
-                try ac_buffer.append(@intCast(i));
+                try ac_buffer.append(@intCast(i + OFFSET));
                 try self.get_autocompletion(r.children[i], writer, ac_buffer);
                 _ = ac_buffer.pop();
             }
