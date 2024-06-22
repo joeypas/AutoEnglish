@@ -113,3 +113,33 @@ pub const Trie = struct {
         }
     }
 };
+
+test "Build Tree" {
+    const allocator = std.testing.allocator;
+
+    var trie = try Trie.init(allocator);
+    defer trie.deinit();
+
+    const root = try trie.alloc_node();
+
+    // Read wordlist and create trie
+    var itr = std.mem.splitScalar(u8, data, '\r');
+    var next = itr.next();
+    while (next) |n| {
+        try trie.add(root, n[1..]);
+        next = itr.next();
+    }
+
+    const slice = "testin";
+
+    const node = trie.get_sub_tree(root, slice);
+
+    var words = std.ArrayList(u8).init(allocator);
+    var temp = std.ArrayList(u8).init(allocator);
+    defer temp.deinit();
+    defer words.deinit();
+
+    try trie.get_autocompletion(node, words.writer(), &temp);
+
+    try std.testing.expect(std.mem.eql(u8, words.items, "ess\ng\ngly\ngs\n"));
+}
